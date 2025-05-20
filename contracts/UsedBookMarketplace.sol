@@ -4,11 +4,8 @@ pragma solidity ^0.8.20; // Solidity 컴파일러 버전 지정
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // ERC721 표준 임포트
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // URI 저장 확장 임포트
 import "@openzeppelin/contracts/access/Ownable.sol"; // 소유자 관리 기능 임포트 (컨트랙트 배포자에게 관리 권한 부여)
-// import "@openzeppelin/contracts/utils/Counters.sol"; // 이 줄을 제거하거나 주석 처리하세요.
 
 contract UsedBookMarketplace is ERC721URIStorage, Ownable {
-    // using Counters for Counters.Counter; // 이 줄을 제거하거나 주석 처리하세요.
-    // Counters.Counter private _tokenIdCounter; // 이 줄을 제거하거나 주석 처리하세요.
 
     uint256 private _nextTokenId; // 다음으로 발행할 토큰 ID를 직접 관리하는 변수 추가
 
