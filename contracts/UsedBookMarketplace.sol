@@ -4,12 +4,13 @@ pragma solidity ^0.8.20; // Solidity 컴파일러 버전 지정
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // ERC721 표준 임포트
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // URI 저장 확장 임포트
 import "@openzeppelin/contracts/access/Ownable.sol"; // 소유자 관리 기능 임포트 (컨트랙트 배포자에게 관리 권한 부여)
-import "@openzeppelin/contracts/utils/Counters.sol"; // 토큰 ID 생성을 위한 카운터 유틸리티
+// import "@openzeppelin/contracts/utils/Counters.sol"; // 이 줄을 제거하거나 주석 처리하세요.
 
-// ERC721URIStorage, Ownable을 상속받는 UsedBookMarketplace 컨트랙트
 contract UsedBookMarketplace is ERC721URIStorage, Ownable {
-    using Counters for Counters.Counter; // Counters 라이브러리 사용 선언
-    Counters.Counter private _tokenIdCounter; // NFT 토큰 ID를 위한 카운터
+    // using Counters for Counters.Counter; // 이 줄을 제거하거나 주석 처리하세요.
+    // Counters.Counter private _tokenIdCounter; // 이 줄을 제거하거나 주석 처리하세요.
+
+    uint256 private _nextTokenId; // 다음으로 발행할 토큰 ID를 직접 관리하는 변수 추가
 
     // 판매 목록에 올라온 NFT 정보 (판매자, 가격)
     struct Listing {
@@ -31,7 +32,9 @@ contract UsedBookMarketplace is ERC721URIStorage, Ownable {
     constructor()
         ERC721("UsedBookNFT", "UBN")
         Ownable(msg.sender) // 컨트랙트 배포자를 소유자로 설정 (관리자)
-    {}
+    {
+        _nextTokenId = 1; // 첫 토큰 ID를 1로 시작하도록 초기화
+    }
 
     // --- NFT 발행 (Minting) ---
     // 새로운 중고책 NFT를 발행하는 함수 (서비스 관리자 또는 특정 권한을 가진 자만 호출 가능)
@@ -41,14 +44,14 @@ contract UsedBookMarketplace is ERC721URIStorage, Ownable {
         public onlyOwner // 오직 컨트랙트 소유자(관리자)만 호출 가능
         returns (uint256)
     {
-        _tokenIdCounter.increment(); // 토큰 ID 증가
-        uint256 newItemId = _tokenIdCounter.current(); // 현재 토큰 ID 가져오기
+        uint256 tokenId = _nextTokenId; // 현재 _nextTokenId 값을 사용
+        _nextTokenId++; // 다음 토큰 ID로 증가 (Solidity 0.8.0+ 에서는 오버플로우 방지 내장)
 
-        _mint(_to, newItemId); // _to 주소에 새로운 NFT 발행
-        _setTokenURI(newItemId, _tokenURI); // 해당 NFT의 URI 설정
+        _mint(_to, tokenId); // _to 주소에 새로운 NFT 발행
+        _setTokenURI(tokenId, _tokenURI); // 해당 NFT의 URI 설정
 
-        emit NFTMinted(newItemId, _to, _tokenURI); // NFT 발행 이벤트 발생
-        return newItemId; // 발행된 토큰 ID 반환
+        emit NFTMinted(tokenId, _to, _tokenURI); // NFT 발행 이벤트 발생
+        return tokenId; // 발행된 토큰 ID 반환
     }
 
     // --- NFT 판매 등록 (Listing) ---
@@ -62,13 +65,9 @@ contract UsedBookMarketplace is ERC721URIStorage, Ownable {
         require(_price > 0, "UsedBookMarketplace: Price must be greater than 0.");
         // 3. 이미 판매 등록된 NFT인지 확인
         require(!listings[_tokenId].isListed, "UsedBookMarketplace: NFT is already listed for sale.");
-        // 4. 마켓플레이스 컨트랙트에 NFT 전송 권한 승인 요청
-        // NFT 소유자(msg.sender)가 마켓플레이스 컨트랙트(address(this))에게 해당 NFT를 전송할 수 있는 권한을 부여
+        // 4. 마켓플레이스 컨트랙트가 NFT를 전송할 권한이 있는지 확인
         // 이 승인 트랜잭션은 listItem 함수 호출 전에 별도로 클라이언트(프론트엔드/백엔드)에서 처리되어야 합니다.
-        // 예를 들어, 클라이언트에서 `IERC721(address(this)).approve(address(this), _tokenId);`를 호출하게 해야 합니다.
-        // 또는, 이 함수 내에서 approve를 호출할 수도 있지만, 일반적인 패턴은 아닙니다.
-
-        // 마켓플레이스 컨트랙트가 NFT를 전송할 권한이 있는지 확인
+        // 예를 들어, 클라이언트에서 ERC721.approve(마켓플레이스_컨트랙트_주소, _tokenId); 를 호출하게 해야 합니다.
         require(
             getApproved(_tokenId) == address(this) || isApprovedForAll(msg.sender, address(this)),
             "UsedBookMarketplace: Marketplace contract not approved to transfer NFT."
@@ -95,7 +94,7 @@ contract UsedBookMarketplace is ERC721URIStorage, Ownable {
 
     // --- NFT 구매 (Buying) ---
     // 구매자가 NFT를 구매
-    // _tokenId: 구매할 NFT의 토큰 ID
+    // _tokenId: 구매할 NFT의 토кен ID
     function purchaseItem(uint256 _tokenId) public payable {
         // 1. 판매 등록된 NFT인지 확인
         require(listings[_tokenId].isListed, "UsedBookMarketplace: NFT is not listed for sale.");
@@ -108,6 +107,8 @@ contract UsedBookMarketplace is ERC721URIStorage, Ownable {
         uint256 price = listings[_tokenId].price; // 판매 가격
 
         // NFT 소유권 이전 (마켓플레이스 컨트랙트가 전송)
+        // _transfer 함수를 호출하기 위해서는 마켓플레이스 컨트랙트가 해당 NFT의 전송 권한을 가지고 있어야 합니다.
+        // 이는 listItem 함수 내의 require 문에서 이미 확인합니다.
         _transfer(ownerOf(_tokenId), msg.sender, _tokenId); // 기존 소유자 -> 구매자
 
         // 판매자에게 이더리움 전송
