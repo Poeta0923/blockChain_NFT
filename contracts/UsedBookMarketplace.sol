@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20; // Solidity 컴파일러 버전 지정
+pragma solidity >=0.4.25 <0.9.0; // Solidity 컴파일러 버전 지정
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol"; // ERC721 표준 임포트
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol"; // URI 저장 확장 임포트
